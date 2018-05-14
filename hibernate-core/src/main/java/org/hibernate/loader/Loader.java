@@ -104,7 +104,7 @@ public abstract class Loader {
     private static int MAX_COLLECTION_SIZE;
 
     static {
-        final String envMaxCollectionSize = System.getProperty("com.journaltech.hibernate.MAX_COLLECTION_SIZE", "0");
+        final String envMaxCollectionSize = System.getProperty("com.journaltech.hibernate.MAX_COLLECTION_SIZE", "20000");
         if (envMaxCollectionSize != null) {
             try {
                 MAX_COLLECTION_SIZE = Integer.parseInt(envMaxCollectionSize);
