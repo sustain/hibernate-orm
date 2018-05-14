@@ -268,7 +268,7 @@ public abstract class Loader {
 	private List doQueryAndInitializeNonLazyCollections(
 			final SessionImplementor session,
 			final QueryParameters queryParameters,
-			final boolean returnProxies) throws HibernateException, SQLException {
+			final boolean returnProxies, boolean loadingCollection) throws HibernateException, SQLException {
 		final PersistenceContext persistenceContext = session.getPersistenceContext();
 		boolean defaultReadOnlyOrig = persistenceContext.isDefaultReadOnly();
 		if ( queryParameters.isReadOnlyInitialized() ) {
@@ -285,7 +285,7 @@ public abstract class Loader {
 		List result;
 		try {
 			try {
-				result = doQuery( session, queryParameters, returnProxies );
+				result = doQuery( session, queryParameters, returnProxies, loadingCollection);
 			}
 			finally {
 				persistenceContext.afterLoad();
@@ -802,7 +802,7 @@ public abstract class Loader {
 	private List doQuery(
 			final SessionImplementor session,
 			final QueryParameters queryParameters,
-			final boolean returnProxies) throws SQLException, HibernateException {
+			final boolean returnProxies, boolean loadingCollection) throws SQLException, HibernateException {
 
 		final RowSelection selection = queryParameters.getRowSelection();
 		final int maxRows = hasMaxRows( selection ) ?
@@ -838,7 +838,7 @@ public abstract class Loader {
 			int count;
 			for ( count = 0; count < maxRows && rs.next(); count++ ) {
 
-                if (MAX_COLLECTION_SIZE > 0 && count > MAX_COLLECTION_SIZE) {
+                if (loadingCollection && MAX_COLLECTION_SIZE > 0 && count > MAX_COLLECTION_SIZE) {
                     throw new HibernateException("Maximum collection size exceeded " + MAX_COLLECTION_SIZE + " for " + this.getSQLString() + "; query parameters=" + Arrays.toString(queryParameters.getCollectionKeys()));
                 }
 				
@@ -2052,7 +2052,7 @@ public abstract class Loader {
 			qp.setOptionalEntityName( optionalEntityName );
 			qp.setOptionalId( optionalIdentifier );
 			qp.setLockOptions( lockOptions );
-			result = doQueryAndInitializeNonLazyCollections( session, qp, false );
+			result = doQueryAndInitializeNonLazyCollections( session, qp, false, false);
 		}
 		catch ( SQLException sqle ) {
 			final Loadable[] persisters = getEntityPersisters();
@@ -2095,8 +2095,8 @@ public abstract class Loader {
 							new Type[] { keyType, indexType },
 							new Object[] { key, index }
 					),
-					false
-			);
+					false,
+					false);
 		}
 		catch ( SQLException sqle ) {
 			throw JDBCExceptionHelper.convert(
@@ -2146,7 +2146,7 @@ public abstract class Loader {
 			qp.setOptionalEntityName( optionalEntityName );
 			qp.setOptionalId( optionalId );
 			qp.setLockOptions( lockOptions );
-			result = doQueryAndInitializeNonLazyCollections( session, qp, false );
+			result = doQueryAndInitializeNonLazyCollections( session, qp, false, false);
 		}
 		catch ( SQLException sqle ) {
 			throw JDBCExceptionHelper.convert(
@@ -2184,7 +2184,8 @@ public abstract class Loader {
 			doQueryAndInitializeNonLazyCollections( 
 					session,
 					new QueryParameters( new Type[]{type}, ids, ids ),
-					true 
+					true ,
+					true
 				);
 		}
 		catch ( SQLException sqle ) {
@@ -2222,8 +2223,8 @@ public abstract class Loader {
 			doQueryAndInitializeNonLazyCollections( 
 					session,
 					new QueryParameters( idTypes, ids, ids ),
-					true 
-				);
+					true,
+					true);
 		}
 		catch ( SQLException sqle ) {
 			throw JDBCExceptionHelper.convert(
@@ -2255,8 +2256,9 @@ public abstract class Loader {
 		try {
 			doQueryAndInitializeNonLazyCollections( session,
 					new QueryParameters( parameterTypes, parameterValues, namedParameters, ids ),
-					true 
-				);
+					true,
+					true
+					);
 		}
 		catch ( SQLException sqle ) {
 			throw JDBCExceptionHelper.convert(
@@ -2557,7 +2559,7 @@ public abstract class Loader {
 
 		List result;
 		try {
-			result = doQueryAndInitializeNonLazyCollections( session, queryParameters, true );
+			result = doQueryAndInitializeNonLazyCollections( session, queryParameters, true, false);
 		}
 		catch ( SQLException sqle ) {
 			throw JDBCExceptionHelper.convert(
