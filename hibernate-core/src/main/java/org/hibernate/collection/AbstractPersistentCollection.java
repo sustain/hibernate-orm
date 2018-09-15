@@ -158,7 +158,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			throwLazyInitializationExceptionIfNotConnected();
 			CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
 			CollectionPersister persister = entry.getLoadedPersister();
-			if ( persister.isExtraLazy() ) {
+			if ( persister.isExtraLazy() && session.getContextEntityIdentifier(element) != null) {
 				if ( !session.getFlushMode().lessThan(FlushMode.AUTO) && hasQueuedOperations() ) {
 					session.flush();
 				}
@@ -546,6 +546,19 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			return CollectionHelper.EMPTY_COLLECTION;
 		}
 	}
+
+    protected int queueOperationRemoveAdds(final Object value) {
+        int n = 0;
+	    final Iterator it = operationQueue.iterator();
+        while (it.hasNext()) {
+            final DelayedOperation next = (DelayedOperation) it.next();
+            if (next.getAddedInstance() == value) {
+                it.remove();
+                n++;
+            }
+        }
+        return n;
+    }
 
 	/**
 	 * Called before inserting rows, to ensure that any surrogate keys
