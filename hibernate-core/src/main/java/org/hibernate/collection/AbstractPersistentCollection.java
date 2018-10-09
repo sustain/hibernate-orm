@@ -158,11 +158,14 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			throwLazyInitializationExceptionIfNotConnected();
 			CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
 			CollectionPersister persister = entry.getLoadedPersister();
-			if ( persister.isExtraLazy() && session.getContextEntityIdentifier(element) != null) {
-				if ( !session.getFlushMode().lessThan(FlushMode.AUTO) && hasQueuedOperations() ) {
-					session.flush();
+			if (persister.isExtraLazy()) {
+				if (session.getContextEntityIdentifier(element) != null) {
+					if ( !session.getFlushMode().lessThan(FlushMode.AUTO) && hasQueuedOperations() ) {
+						session.flush();
+					}
+					return new Boolean( persister.elementExists( entry.getLoadedKey(), element, session ) );
 				}
-				return new Boolean( persister.elementExists( entry.getLoadedKey(), element, session ) );
+				return null;
 			}
 		}
 		read();
