@@ -57,7 +57,7 @@ import org.hibernate.util.MarkerObject;
  */
 public abstract class AbstractPersistentCollection implements Serializable, PersistentCollection {
 
-	private transient SessionImplementor session;
+	protected transient SessionImplementor session;
 	private boolean initialized;
 	private transient List operationQueue;
 	private transient boolean directlyAccessible;
@@ -165,7 +165,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 					}
 					return new Boolean( persister.elementExists( entry.getLoadedKey(), element, session ) );
 				}
-				return null;
+				return Boolean.FALSE;
 			}
 		}
 		read();

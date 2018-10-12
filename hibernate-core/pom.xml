@@ -35,7 +35,7 @@
 
     <groupId>com.journaltech</groupId>
     <artifactId>hibernate-core</artifactId>
-    <version>3.6.10.Final-b7</version>
+    <version>3.6.10.Final-b11</version>
     <packaging>jar</packaging>
 
     <name>Hibernate Core</name>

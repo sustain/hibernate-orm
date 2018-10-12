@@ -35,6 +35,7 @@ import java.util.ListIterator;
 
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
+import org.hibernate.engine.CollectionEntry;
 import org.hibernate.engine.SessionImplementor;
 import org.hibernate.loader.CollectionAliases;
 import org.hibernate.persister.collection.CollectionPersister;
@@ -189,6 +190,23 @@ public class PersistentList extends AbstractPersistentCollection implements List
 			return true;
 		}
 		else {
+			CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
+			CollectionPersister persister = entry.getLoadedPersister();
+			if ( persister.isExtraLazy() ) {
+				if ( list != null ) {
+					if (session.getContextEntityIdentifier(value) != null) {
+						if (list.remove(value)) {
+							dirty();
+							return true;
+						} else {
+							return false;
+						}
+					}
+				} else {
+					queueOperation(new SimpleRemove(value));
+					return true;
+				}
+			}
 			return false;
 		}
 	}

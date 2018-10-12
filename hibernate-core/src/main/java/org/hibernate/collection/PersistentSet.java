@@ -36,6 +36,7 @@ import java.util.Set;
 
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
+import org.hibernate.engine.CollectionEntry;
 import org.hibernate.engine.SessionImplementor;
 import org.hibernate.loader.CollectionAliases;
 import org.hibernate.persister.collection.CollectionPersister;
@@ -247,6 +248,23 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 			return true;
 		}
 		else {
+			CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
+			CollectionPersister persister = entry.getLoadedPersister();
+			if ( persister.isExtraLazy() ) {
+				if ( set != null ) {
+					if (session.getContextEntityIdentifier(value) != null) {
+						if (set.remove(value)) {
+							dirty();
+							return true;
+						} else {
+							return false;
+						}
+					}
+				} else {
+					queueOperation(new SimpleRemove(value));
+					return true;
+				}
+			}
 			return false;
 		}
 	}
