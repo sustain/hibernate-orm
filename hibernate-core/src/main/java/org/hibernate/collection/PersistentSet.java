@@ -242,28 +242,17 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 			else {
 				return false;
 			}
-		}
-		else if ( exists.booleanValue() ) {
+		} else if ( exists.booleanValue() ) {
 			queueOperation( new SimpleRemove(value) );
 			return true;
-		}
-		else {
-			CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
-			CollectionPersister persister = entry.getLoadedPersister();
-			if ( persister.isExtraLazy() ) {
-				if ( set != null ) {
-					if (session.getContextEntityIdentifier(value) != null) {
-						if (set.remove(value)) {
-							dirty();
-							return true;
-						} else {
-							return false;
-						}
-					}
-				} else {
-					queueOperation(new SimpleRemove(value));
-					return true;
+		} else {
+			final CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
+			final CollectionPersister persister = entry.getLoadedPersister();
+			if ( persister.isExtraLazy() && set != null && set.remove(value)) {
+				if (session.getContextEntityIdentifier(value) != null) {
+					dirty();
 				}
+				return true;
 			}
 			return false;
 		}
