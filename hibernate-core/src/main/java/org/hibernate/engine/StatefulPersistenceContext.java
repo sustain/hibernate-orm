@@ -79,54 +79,54 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	private static final int INIT_COLL_SIZE = 8;
 
 	private SessionImplementor session;
-	
+
 	// Loaded entity instances, by EntityKey
 	private Map entitiesByKey;
 
 	// Loaded entity instances, by EntityUniqueKey
 	private Map entitiesByUniqueKey;
-	
+
 	// Identity map of EntityEntry instances, by the entity instance
 	private Map entityEntries;
-	
+
 	// Entity proxies, by EntityKey
 	private Map proxiesByKey;
-	
+
 	// Snapshots of current database state for entities
 	// that have *not* been loaded
 	private Map entitySnapshotsByKey;
-	
+
 	// Identity map of array holder ArrayHolder instances, by the array instance
 	private Map arrayHolders;
-	
+
 	// Identity map of CollectionEntry instances, by the collection wrapper
 	private Map collectionEntries;
-	
+
 	// Collection wrappers, by the CollectionKey
 	private Map collectionsByKey; //key=CollectionKey, value=PersistentCollection
-	
+
 	// Set of EntityKeys of deleted objects
 	private HashSet nullifiableEntityKeys;
-	
+
 	// properties that we have tried to load, and not found in the database
 	private HashSet nullAssociations;
-	
+
 	// A list of collection wrappers that were instantiating during result set
 	// processing, that we will need to initialize at the end of the query
 	private List nonlazyCollections;
-	
+
 	// A container for collections we load up when the owning entity is not
 	// yet loaded ... for now, this is purely transient!
 	private Map unownedCollections;
-	
+
 	// Parent entities cache by their child for cascading
-	// May be empty or not contains all relation 
+	// May be empty or not contains all relation
 	private Map parentsByChild;
-	
+
 	private int cascading = 0;
 	private int loadCounter = 0;
 	private boolean flushing = false;
-	
+
 	private boolean defaultReadOnly = false;
 	private boolean hasNonReadOnlyEntities = false;
 
@@ -153,7 +153,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		collectionsByKey = new HashMap( INIT_COLL_SIZE );
 		arrayHolders = IdentityMap.instantiate( INIT_COLL_SIZE );
 		parentsByChild = IdentityMap.instantiateSequenced( INIT_COLL_SIZE );
-		
+
 		nullifiableEntityKeys = new HashSet();
 
 		initTransientState();
@@ -167,7 +167,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public boolean isStateless() {
 		return false;
 	}
-	
+
 	public SessionImplementor getSession() {
 		return session;
 	}
@@ -185,7 +185,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		}
 		unownedCollections.put(key, collection);
 	}
-	
+
 	public PersistentCollection useUnownedCollection(CollectionKey key) {
 		if (unownedCollections==null) {
 			return null;
@@ -194,7 +194,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			return (PersistentCollection) unownedCollections.remove(key);
 		}
 	}
-	
+
 	/**
 	 * Get the <tt>BatchFetchQueue</tt>, instantiating one if
 	 * necessary.
@@ -207,14 +207,23 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	}
 
 	public void clear() {
-		Iterator itr = proxiesByKey.values().iterator();
-		while ( itr.hasNext() ) {
-			final LazyInitializer li = ( ( HibernateProxy ) itr.next() ).getHibernateLazyInitializer();
+		for (final Object o : proxiesByKey.values()) {
+			final LazyInitializer li = ((HibernateProxy) o).getHibernateLazyInitializer();
 			li.unsetSession();
 		}
-		Map.Entry[] collectionEntryArray = IdentityMap.concurrentEntries( collectionEntries );
+		final Map.Entry[] collectionEntryArray = IdentityMap.concurrentEntries( collectionEntries );
 		for ( int i = 0; i < collectionEntryArray.length; i++ ) {
-			( ( PersistentCollection ) collectionEntryArray[i].getKey() ).unsetSession( getSession() );
+			final Map.Entry entry = collectionEntryArray[i];
+			if (entry == null) {
+				log.warn("collectionEntryArray[" + i + "] is null");
+				continue;
+			}
+			final PersistentCollection persistentCollection = (PersistentCollection) entry.getKey();
+			if (persistentCollection == null) {
+				log.warn("persistentCollection in collectionEntryArray[" + i + "].key is null");
+				continue;
+			}
+			persistentCollection.unsetSession( getSession() );
 		}
 		arrayHolders.clear();
 		entitiesByKey.clear();
@@ -256,12 +265,12 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public boolean hasNonReadOnlyEntities() {
 		return hasNonReadOnlyEntities;
 	}
-	
+
 	public void setEntryStatus(EntityEntry entry, Status status) {
 		entry.setStatus(status);
 		setHasNonReadOnlyEnties(status);
 	}
-	
+
 	private void setHasNonReadOnlyEnties(Status status) {
 		if ( status==Status.DELETED || status==Status.MANAGED || status==Status.SAVING ) {
 			hasNonReadOnlyEntities = true;
@@ -279,7 +288,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	/**
 	 * Get the current state of the entity as known to the underlying
-	 * database, or null if there is no corresponding row 
+	 * database, or null if there is no corresponding row
 	 */
 	public Object[] getDatabaseSnapshot(Serializable id, EntityPersister persister)
 	throws HibernateException {
@@ -361,7 +370,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	}
 
 	/**
-	 * Get the entity instance associated with the given 
+	 * Get the entity instance associated with the given
 	 * <tt>EntityKey</tt>
 	 */
 	public Object getEntity(EntityKey key) {
@@ -449,12 +458,12 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			final LockMode lockMode,
 			final boolean existsInDatabase,
 			final EntityPersister persister,
-			final boolean disableVersionIncrement, 
+			final boolean disableVersionIncrement,
 			boolean lazyPropertiesAreUnfetched
 	) {
-		
+
 		addEntity( entityKey, entity );
-		
+
 		return addEntry(
 				entity,
 				status,
@@ -465,14 +474,14 @@ public class StatefulPersistenceContext implements PersistenceContext {
 				lockMode,
 				existsInDatabase,
 				persister,
-				disableVersionIncrement, 
+				disableVersionIncrement,
 				lazyPropertiesAreUnfetched
 			);
 	}
 
 
 	/**
-	 * Generates an appropriate EntityEntry instance and adds it 
+	 * Generates an appropriate EntityEntry instance and adds it
 	 * to the event source's internal caches.
 	 */
 	public EntityEntry addEntry(
@@ -485,9 +494,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			final LockMode lockMode,
 			final boolean existsInDatabase,
 			final EntityPersister persister,
-			final boolean disableVersionIncrement, 
+			final boolean disableVersionIncrement,
 			boolean lazyPropertiesAreUnfetched) {
-		
+
 		EntityEntry e = new EntityEntry(
 				status,
 				loadedState,
@@ -502,7 +511,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 				lazyPropertiesAreUnfetched
 			);
 		entityEntries.put(entity, e);
-		
+
 		setHasNonReadOnlyEnties(status);
 		return e;
 	}
@@ -514,7 +523,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public boolean containsProxy(Object entity) {
 		return proxiesByKey.containsValue( entity );
 	}
-	
+
 	/**
 	 * Takes the given object and, if it represents a proxy, reassociates it with this event source.
 	 *
@@ -526,7 +535,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		if ( value instanceof ElementWrapper ) {
 			value = ( (ElementWrapper) value ).getElement();
 		}
-		
+
 		if ( !Hibernate.isInitialized(value) ) {
 			HibernateProxy proxy = (HibernateProxy) value;
 			LazyInitializer li = proxy.getHibernateLazyInitializer();
@@ -540,13 +549,13 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	/**
 	 * If a deleted entity instance is re-saved, and it has a proxy, we need to
-	 * reset the identifier of the proxy 
+	 * reset the identifier of the proxy
 	 */
 	public void reassociateProxy(Object value, Serializable id) throws MappingException {
 		if ( value instanceof ElementWrapper ) {
 			value = ( (ElementWrapper) value ).getElement();
 		}
-		
+
 		if ( value instanceof HibernateProxy ) {
 			if ( log.isDebugEnabled() ) log.debug("setting proxy identifier: " + id);
 			HibernateProxy proxy = (HibernateProxy) value;
@@ -583,7 +592,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		if ( maybeProxy instanceof ElementWrapper ) {
 			maybeProxy = ( (ElementWrapper) maybeProxy ).getElement();
 		}
-		
+
 		if ( maybeProxy instanceof HibernateProxy ) {
 			HibernateProxy proxy = (HibernateProxy) maybeProxy;
 			LazyInitializer li = proxy.getHibernateLazyInitializer();
@@ -611,7 +620,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		if ( maybeProxy instanceof ElementWrapper ) {
 			maybeProxy = ( (ElementWrapper) maybeProxy ).getElement();
 		}
-		
+
 		if ( maybeProxy instanceof HibernateProxy ) {
 			HibernateProxy proxy = (HibernateProxy) maybeProxy;
 			LazyInitializer li = proxy.getHibernateLazyInitializer();
@@ -654,10 +663,10 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	 */
 	public Object narrowProxy(Object proxy, EntityPersister persister, EntityKey key, Object object)
 	throws HibernateException {
-		
+
 		boolean alreadyNarrow = persister.getConcreteProxyClass( session.getEntityMode() )
 				.isAssignableFrom( proxy.getClass() );
-		
+
 		if ( !alreadyNarrow ) {
 			if ( PROXY_WARN_LOG.isWarnEnabled() ) {
 				PROXY_WARN_LOG.warn(
@@ -685,19 +694,19 @@ public class StatefulPersistenceContext implements PersistenceContext {
 					( ( HibernateProxy ) proxy ).getHibernateLazyInitializer().setReadOnly( readOnlyOrig );
 				}
 				return proxy;
-			}			
+			}
 		}
 		else {
-			
+
 			if ( object != null ) {
 				LazyInitializer li = ( (HibernateProxy) proxy ).getHibernateLazyInitializer();
 				li.setImplementation(object);
 			}
-			
+
 			return proxy;
-			
+
 		}
-		
+
 	}
 
 	/**
@@ -705,7 +714,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	 * third argument (the entity associated with the key) if no proxy exists. Init
 	 * the proxy to the target implementation, if necessary.
 	 */
-	public Object proxyFor(EntityPersister persister, EntityKey key, Object impl) 
+	public Object proxyFor(EntityPersister persister, EntityKey key, Object impl)
 	throws HibernateException {
 		if ( !persister.hasProxy() ) return impl;
 		Object proxy = proxiesByKey.get(key);
@@ -845,7 +854,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	 * add an (initialized) collection that was created by another session and passed
 	 * into update() (ie. one with a snapshot and existing state on the database)
 	 */
-	public void addInitializedDetachedCollection(CollectionPersister collectionPersister, PersistentCollection collection) 
+	public void addInitializedDetachedCollection(CollectionPersister collectionPersister, PersistentCollection collection)
 	throws HibernateException {
 		if ( collection.isUnreferenced() ) {
 			//treat it just like a new collection
@@ -867,14 +876,14 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		addCollection(collection, ce, id);
 		return ce;
 	}
-	
+
 	/**
 	 * Get the collection instance associated with the <tt>CollectionKey</tt>
 	 */
 	public PersistentCollection getCollection(CollectionKey collectionKey) {
 		return (PersistentCollection) collectionsByKey.get(collectionKey);
 	}
-	
+
 	/**
 	 * Register a collection for non-lazy loading at the end of the
 	 * two-phase load
@@ -917,7 +926,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	/**
 	 * Register a <tt>PersistentCollection</tt> object for an array.
-	 * Associates a holder with an array - MUST be called after loading 
+	 * Associates a holder with an array - MUST be called after loading
 	 * array, since the array instance is not created until endLoad().
 	 */
 	public void addCollectionHolder(PersistentCollection holder) {
@@ -999,7 +1008,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	/**
 	 * Record the fact that an entity does not exist in the database
-	 * 
+	 *
 	 * @param key the primary key of the entity
 	 */
 	/*public void addNonExistantEntityKey(EntityKey key) {
@@ -1008,7 +1017,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	/**
 	 * Record the fact that an entity does not exist in the database
-	 * 
+	 *
 	 * @param key a unique key of the entity
 	 */
 	/*public void addNonExistantEntityUniqueKey(EntityUniqueKey key) {
@@ -1019,7 +1028,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		nonExistantEntityKeys.remove(key);
 	}*/
 
-	/** 
+	/**
 	 * Retrieve the set of EntityKeys representing nullifiable references
 	 */
 	public HashSet getNullifiableEntityKeys() {
@@ -1258,7 +1267,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 				.getEntityPersister(entity);
 		CollectionPersister cp = session.getFactory()
 				.getCollectionPersister(entity + '.' + property);
-		
+
 	    // try cache lookup first
 	    Object parent = parentsByChild.get(childEntity);
 		if (parent != null) {
@@ -1290,9 +1299,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			EntityEntry ee = (EntityEntry) me.getValue();
 			if ( persister.isSubclassEntityName( ee.getEntityName() ) ) {
 				Object instance = me.getKey();
-				
+
 				Object index = getIndexInParent(property, childEntity, persister, cp, instance);
-				
+
 				if (index==null && mergeMap!=null) {
 					Object unmergedInstance = mergeMap.get(instance);
 					Object unmergedChild = mergeMap.get(childEntity);
@@ -1300,20 +1309,20 @@ public class StatefulPersistenceContext implements PersistenceContext {
 						index = getIndexInParent(property, unmergedChild, persister, cp, unmergedInstance);
 					}
 				}
-				
+
 				if (index!=null) return index;
 			}
 		}
 		return null;
 	}
-	
+
 	private Object getIndexInParent(
-			String property, 
-			Object childEntity, 
-			EntityPersister persister, 
+			String property,
+			Object childEntity,
+			EntityPersister persister,
 			CollectionPersister collectionPersister,
 			Object potentialParent
-	){	
+	){
 		Object collection = persister.getPropertyValue( potentialParent, property, session.getEntityMode() );
 		if ( collection!=null && Hibernate.isInitialized(collection) ) {
 			return collectionPersister.getCollectionType().indexOf(collection, childEntity);
@@ -1322,7 +1331,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * Record the fact that the association belonging to the keyed
 	 * entity is null.
@@ -1330,14 +1339,14 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public void addNullProperty(EntityKey ownerKey, String propertyName) {
 		nullAssociations.add( new AssociationKey(ownerKey, propertyName) );
 	}
-	
+
 	/**
 	 * Is the association property belonging to the keyed entity null?
 	 */
 	public boolean isPropertyNull(EntityKey ownerKey, String propertyName) {
 		return nullAssociations.contains( new AssociationKey(ownerKey, propertyName) );
 	}
-	
+
 	private void clearNullProperties() {
 		nullAssociations.clear();
 	}
@@ -1628,7 +1637,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public void addChildParent(Object child, Object parent) {
 		parentsByChild.put(child, parent);
 	}
-	
+
 	/**
 	 * @see org.hibernate.engine.PersistenceContext#removeChildParent(java.lang.Object)
 	 */
