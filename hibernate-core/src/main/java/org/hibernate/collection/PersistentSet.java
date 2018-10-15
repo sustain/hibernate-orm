@@ -36,13 +36,10 @@ import java.util.Set;
 
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
-import org.hibernate.engine.CollectionEntry;
 import org.hibernate.engine.SessionImplementor;
 import org.hibernate.loader.CollectionAliases;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.type.Type;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
@@ -56,8 +53,6 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 
 	protected Set set;
 	protected transient List tempList;
-
-	private static final Logger log = LoggerFactory.getLogger(PersistentSet.class);
 
 	/**
 	 * Empty constructor.
@@ -98,10 +93,10 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 	}
 
 
-	public Serializable getSnapshot(CollectionPersister persister)
+	public Serializable getSnapshot(CollectionPersister persister) 
 	throws HibernateException {
 		EntityMode entityMode = getSession().getEntityMode();
-
+		
 		//if (set==null) return new Set(session);
 		HashMap clonedSet = new HashMap( set.size() );
 		Iterator iter = set.iterator();
@@ -179,8 +174,8 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 	 */
 	public boolean contains(Object object) {
 		Boolean exists = readElementExistence(object);
-		return exists==null ?
-				set.contains(object) :
+		return exists==null ? 
+				set.contains(object) : 
 				exists.booleanValue();
 	}
 
@@ -237,7 +232,6 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 	 */
 	public boolean remove(Object value) {
 		Boolean exists = isPutQueueEnabled() ? readElementExistence( value ) : null;
-		log.info("removing value @" + value.hashCode() + " from set @" + this.hashCode());
 		if ( exists==null ) {
 			initialize( true );
 			if ( set.remove( value ) ) {
@@ -247,19 +241,12 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 			else {
 				return false;
 			}
-		} else if ( exists.booleanValue() ) {
+		}
+		else if ( exists.booleanValue() ) {
 			queueOperation( new SimpleRemove(value) );
 			return true;
-		} else {
-			final CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
-			final CollectionPersister persister = entry.getLoadedPersister();
-			if ( persister.isExtraLazy() ) {
-				if (session.getContextEntityIdentifier(value) != null) {
-					queueOperationRemoveAdds( value );
-					queueOperation( new SimpleRemove(value) );
-					return true;
-				}
-			}
+		}
+		else {
 			return false;
 		}
 	}
@@ -470,7 +457,7 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 
 	final class SimpleAdd implements DelayedOperation {
 		private Object value;
-
+		
 		public SimpleAdd(Object value) {
 			this.value = value;
 		}
@@ -487,7 +474,7 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 
 	final class SimpleRemove implements DelayedOperation {
 		private Object value;
-
+		
 		public SimpleRemove(Object value) {
 			this.value = value;
 		}

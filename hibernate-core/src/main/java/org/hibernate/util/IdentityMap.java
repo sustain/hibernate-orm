@@ -24,22 +24,18 @@
  */
 package org.hibernate.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A <tt>Map</tt> where keys are compared by object identity,
  * rather than <tt>equals()</tt>.
  */
 public final class IdentityMap implements Map {
+	private static final Logger log = LoggerFactory.getLogger( IdentityMap.class );
 
 	private final Map map;
 	private transient Map.Entry[] entryArray = new Map.Entry[0];
@@ -200,34 +196,40 @@ public final class IdentityMap implements Map {
 	}
 
 	public Set entrySet() {
-		Set set = new HashSet( map.size() );
-		Iterator iter = map.entrySet().iterator();
-		while ( iter.hasNext() ) {
-			Map.Entry me = (Map.Entry) iter.next();
-			set.add( new IdentityMapEntry( ( (IdentityKey) me.getKey() ).key, me.getValue() ) );
+		try {
+			final Set<IdentityMapEntry> set = new HashSet<IdentityMapEntry>( map.size() );
+			for (final Object o : map.entrySet()) {
+				final Entry me = (Entry) o;
+				if (me != null) {
+					set.add(new IdentityMapEntry(((IdentityKey) me.getKey()).key, me.getValue()));
+				}
+			}
+			return set;
+		} catch (ConcurrentModificationException e) {
+			log.error(e.toString() + "; occurred during entrySet retry copy", e);
+			return entrySet();
 		}
-		return set;
 	}
 
-	public List entryList() {
-		ArrayList list = new ArrayList( map.size() );
-		Iterator iter = map.entrySet().iterator();
-		while ( iter.hasNext() ) {
-			Map.Entry me = (Map.Entry) iter.next();
-			list.add( new IdentityMapEntry( ( (IdentityKey) me.getKey() ).key, me.getValue() ) );
+	public List<IdentityMapEntry> entryList() {
+		try {
+			final ArrayList<IdentityMapEntry> list = new ArrayList<IdentityMapEntry>( map.size() );
+			for (final Object o : map.entrySet()) {
+				final Entry me = (Entry) o;
+				if (me != null) {
+					list.add(new IdentityMapEntry(((IdentityKey) me.getKey()).key, me.getValue()));
+				}
+			}
+			return list;
+		} catch (ConcurrentModificationException e) {
+			log.error(e.toString() + "; occurred during entryList retry copy", e);
+			return entryList();
 		}
-		return list;
 	}
 
 	public Map.Entry[] entryArray() {
 		if (dirty) {
-			entryArray = new Map.Entry[ map.size() ];
-			Iterator iter = map.entrySet().iterator();
-			int i=0;
-			while ( iter.hasNext() ) {
-				Map.Entry me = (Map.Entry) iter.next();
-				entryArray[i++] = new IdentityMapEntry( ( (IdentityKey) me.getKey() ).key, me.getValue() );
-			}
+			this.entryArray = entryList().toArray(new IdentityMapEntry[0]);
 			dirty = false;
 		}
 		return entryArray;

@@ -35,13 +35,10 @@ import java.util.ListIterator;
 
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
-import org.hibernate.engine.CollectionEntry;
 import org.hibernate.engine.SessionImplementor;
 import org.hibernate.loader.CollectionAliases;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.type.Type;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A persistent wrapper for a <tt>java.util.List</tt>. Underlying
@@ -53,8 +50,6 @@ import org.slf4j.LoggerFactory;
 public class PersistentList extends AbstractPersistentCollection implements List {
 
 	protected List list;
-
-	private static final Logger log = LoggerFactory.getLogger(PersistentSet.class);
 
 	public Serializable getSnapshot(CollectionPersister persister) throws HibernateException {
 
@@ -179,7 +174,6 @@ public class PersistentList extends AbstractPersistentCollection implements List
 	 */
 	public boolean remove(Object value) {
 		Boolean exists = isPutQueueEnabled() ? readElementExistence(value) : null;
-		log.info("removing value @" + value.hashCode() + " from set @" + this.hashCode());
 		if ( exists == null ) {
 			initialize( true );
 			if ( list.remove( value ) ) {
@@ -189,19 +183,12 @@ public class PersistentList extends AbstractPersistentCollection implements List
 			else {
 				return false;
 			}
-		} else if ( exists.booleanValue() ) {
+		}
+		else if ( exists.booleanValue() ) {
 			queueOperation( new SimpleRemove(value) );
 			return true;
-		} else {
-			final CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
-			final CollectionPersister persister = entry.getLoadedPersister();
-			if ( persister.isExtraLazy() ) {
-				if (session.getContextEntityIdentifier(value) != null) {
-					queueOperationRemoveAdds( value );
-					queueOperation( new SimpleRemove(value) );
-					return true;
-				}
-			}
+		}
+		else {
 			return false;
 		}
 	}
