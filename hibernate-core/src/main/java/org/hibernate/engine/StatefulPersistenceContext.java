@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections.map.ReferenceMap;
+import org.hibernate.impl.SessionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.hibernate.AssertionFailure;
@@ -207,14 +208,25 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	}
 
 	public void clear() {
-		Iterator itr = proxiesByKey.values().iterator();
-		while ( itr.hasNext() ) {
-			final LazyInitializer li = ( ( HibernateProxy ) itr.next() ).getHibernateLazyInitializer();
+		for (final Object o : proxiesByKey.values()) {
+			final LazyInitializer li = ((HibernateProxy) o).getHibernateLazyInitializer();
 			li.unsetSession();
 		}
-		Map.Entry[] collectionEntryArray = IdentityMap.concurrentEntries( collectionEntries );
+
+		final Map.Entry[] collectionEntryArray = IdentityMap.concurrentEntries( collectionEntries );
 		for ( int i = 0; i < collectionEntryArray.length; i++ ) {
-			( ( PersistentCollection ) collectionEntryArray[i].getKey() ).unsetSession( getSession() );
+			final Map.Entry entry = collectionEntryArray[i];
+			if (entry == null) {
+				log.warn("collectionEntryArray[" + i + "] is null");
+				continue;
+			}
+
+			final PersistentCollection persistentCollection = (PersistentCollection) entry.getKey();
+			if (persistentCollection == null) {
+				log.warn("persistentCollection in collectionEntryArray[" + i + "].key is null");
+				continue;
+			}
+			persistentCollection.unsetSession( getSession() );
 		}
 		arrayHolders.clear();
 		entitiesByKey.clear();

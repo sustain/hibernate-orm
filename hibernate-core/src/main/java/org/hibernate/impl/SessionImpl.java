@@ -36,7 +36,6 @@ import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -295,10 +294,25 @@ public final class SessionImpl extends AbstractSessionImpl
 	}
 
 	public void clear() {
+		log.debug("clear session: " + getContextInfo());
 		errorIfClosed();
 		checkTransactionSynchStatus();
 		persistenceContext.clear();
 		actionQueue.clear();
+		log.debug("clear session end: " + getContextInfo());
+	}
+
+	public String getContextInfo() {
+		final StringBuilder sb = new StringBuilder(this.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(this)));
+
+		sb.append(".").append(this.persistenceContext.getClass().getSimpleName()).append("@")
+				.append(Integer.toHexString(System.identityHashCode(this.persistenceContext)));
+
+		final Map collectionEntries = this.persistenceContext.getCollectionEntries();
+		sb.append(".").append(collectionEntries.getClass().getSimpleName()).append("@")
+				.append(Integer.toHexString(System.identityHashCode(collectionEntries)));
+
+		return sb.toString();
 	}
 
 	public Batcher getBatcher() {
@@ -1927,14 +1941,12 @@ public final class SessionImpl extends AbstractSessionImpl
 	}
 
 	public String toString() {
-		StringBuffer buf = new StringBuffer(500)
-			.append( "SessionImpl(" );
+		final StringBuilder buf = new StringBuilder(500).append( "SessionImpl(" );
 		if ( !isClosed() ) {
 			buf.append(persistenceContext)
 				.append(";")
 				.append(actionQueue);
-		}
-		else {
+		} else {
 			buf.append("<closed>");
 		}
 		return buf.append(')').toString();

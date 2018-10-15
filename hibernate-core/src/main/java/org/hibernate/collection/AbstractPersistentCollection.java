@@ -57,7 +57,7 @@ import org.hibernate.util.MarkerObject;
  */
 public abstract class AbstractPersistentCollection implements Serializable, PersistentCollection {
 
-	protected transient SessionImplementor session;
+	private transient SessionImplementor session;
 	private boolean initialized;
 	private transient List operationQueue;
 	private transient boolean directlyAccessible;
@@ -158,14 +158,11 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			throwLazyInitializationExceptionIfNotConnected();
 			CollectionEntry entry = session.getPersistenceContext().getCollectionEntry(this);
 			CollectionPersister persister = entry.getLoadedPersister();
-			if (persister.isExtraLazy()) {
-				if (session.getContextEntityIdentifier(element) != null) {
-					if ( !session.getFlushMode().lessThan(FlushMode.AUTO) && hasQueuedOperations() ) {
-						session.flush();
-					}
-					return new Boolean( persister.elementExists( entry.getLoadedKey(), element, session ) );
+			if ( persister.isExtraLazy() ) {
+				if ( !session.getFlushMode().lessThan(FlushMode.AUTO) && hasQueuedOperations() ) {
+					session.flush();
 				}
-				return Boolean.FALSE;
+				return new Boolean( persister.elementExists( entry.getLoadedKey(), element, session ) );
 			}
 		}
 		read();
@@ -549,19 +546,6 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			return CollectionHelper.EMPTY_COLLECTION;
 		}
 	}
-
-    protected int queueOperationRemoveAdds(final Object value) {
-        int n = 0;
-	    final Iterator it = operationQueue.iterator();
-        while (it.hasNext()) {
-            final DelayedOperation next = (DelayedOperation) it.next();
-            if (next.getAddedInstance() == value) {
-                it.remove();
-                n++;
-            }
-        }
-        return n;
-    }
 
 	/**
 	 * Called before inserting rows, to ensure that any surrogate keys
