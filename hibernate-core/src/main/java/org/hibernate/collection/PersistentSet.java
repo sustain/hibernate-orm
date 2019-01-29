@@ -57,8 +57,6 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 	protected Set set;
 	protected transient List tempList;
 
-	private static final Logger log = LoggerFactory.getLogger(PersistentSet.class);
-
 	/**
 	 * Empty constructor.
 	 * <p/>
@@ -237,7 +235,6 @@ public class PersistentSet extends AbstractPersistentCollection implements java.
 	 */
 	public boolean remove(Object value) {
 		Boolean exists = isPutQueueEnabled() ? readElementExistence( value ) : null;
-		log.info("removing value @" + value.hashCode() + " from set @" + this.hashCode());
 		if ( exists==null ) {
 			initialize( true );
 			if ( set.remove( value ) ) {

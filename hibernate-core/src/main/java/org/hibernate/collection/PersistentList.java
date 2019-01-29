@@ -54,8 +54,6 @@ public class PersistentList extends AbstractPersistentCollection implements List
 
 	protected List list;
 
-	private static final Logger log = LoggerFactory.getLogger(PersistentSet.class);
-
 	public Serializable getSnapshot(CollectionPersister persister) throws HibernateException {
 
 		EntityMode entityMode = getSession().getEntityMode();
@@ -179,7 +177,6 @@ public class PersistentList extends AbstractPersistentCollection implements List
 	 */
 	public boolean remove(Object value) {
 		Boolean exists = isPutQueueEnabled() ? readElementExistence(value) : null;
-		log.info("removing value @" + value.hashCode() + " from set @" + this.hashCode());
 		if ( exists == null ) {
 			initialize( true );
 			if ( list.remove( value ) ) {
